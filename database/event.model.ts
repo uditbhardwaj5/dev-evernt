@@ -1,6 +1,7 @@
-import { HydratedDocument, Model, Schema, model, models } from "mongoose";
+import { Schema, model, models, Document } from 'mongoose';
 
-export interface EventDocumentShape {
+// TypeScript interface for Event document
+export interface IEvent extends Document {
   title: string;
   slug: string;
   description: string;
@@ -19,154 +20,168 @@ export interface EventDocumentShape {
   updatedAt: Date;
 }
 
-type EventDocument = HydratedDocument<EventDocumentShape>;
-type EventModel = Model<EventDocumentShape>;
-
-const requiredString = (fieldName: string) => ({
-  type: String,
-  required: [true, `${fieldName} is required`],
-  trim: true,
-  validate: {
-    validator: (value: string) => value.trim().length > 0,
-    message: `${fieldName} cannot be empty`,
-  },
-});
-
-const slugify = (input: string): string =>
-  input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-
-const toIsoDateString = (value: string): string => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error("Invalid date. Use a valid date value.");
-  }
-  return parsed.toISOString();
-};
-
-const to24HourTime = (value: string): string => {
-  const input = value.trim().toLowerCase();
-
-  const twentyFourHour = input.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
-  if (twentyFourHour) {
-    return `${twentyFourHour[1].padStart(2, "0")}:${twentyFourHour[2]}`;
-  }
-
-  const twelveHourWithMinutes = input.match(/^([1-9]|1[0-2]):([0-5]\d)\s*(am|pm)$/);
-  if (twelveHourWithMinutes) {
-    const hourRaw = Number(twelveHourWithMinutes[1]);
-    const minute = twelveHourWithMinutes[2];
-    const period = twelveHourWithMinutes[3];
-    const hour = period === "pm" ? (hourRaw % 12) + 12 : hourRaw % 12;
-    return `${String(hour).padStart(2, "0")}:${minute}`;
-  }
-
-  const twelveHourNoMinutes = input.match(/^([1-9]|1[0-2])\s*(am|pm)$/);
-  if (twelveHourNoMinutes) {
-    const hourRaw = Number(twelveHourNoMinutes[1]);
-    const period = twelveHourNoMinutes[2];
-    const hour = period === "pm" ? (hourRaw % 12) + 12 : hourRaw % 12;
-    return `${String(hour).padStart(2, "0")}:00`;
-  }
-
-  throw new Error("Invalid time. Use HH:mm, h:mm am/pm, or h am/pm.");
-};
-
-const eventSchema = new Schema<EventDocumentShape, EventModel>(
-  {
-    title: requiredString("title"),
-    slug: {
-      type: String,
-      unique: true,
-      index: true,
-      trim: true,
-    },
-    description: requiredString("description"),
-    overview: requiredString("overview"),
-    image: requiredString("image"),
-    venue: requiredString("venue"),
-    location: requiredString("location"),
-    date: requiredString("date"),
-    time: requiredString("time"),
-    mode: requiredString("mode"),
-    audience: requiredString("audience"),
-    agenda: {
-      type: [String],
-      required: [true, "agenda is required"],
-      validate: {
-        validator: (items: string[]) =>
-          Array.isArray(items) && items.length > 0 && items.every((item) => item.trim().length > 0),
-        message: "agenda must contain at least one non-empty item",
+const EventSchema = new Schema<IEvent>(
+    {
+      title: {
+        type: String,
+        required: [true, 'Title is required'],
+        trim: true,
+        maxlength: [100, 'Title cannot exceed 100 characters'],
+      },
+      slug: {
+        type: String,
+        unique: true,
+        lowercase: true,
+        trim: true,
+      },
+      description: {
+        type: String,
+        required: [true, 'Description is required'],
+        trim: true,
+        maxlength: [1000, 'Description cannot exceed 1000 characters'],
+      },
+      overview: {
+        type: String,
+        required: [true, 'Overview is required'],
+        trim: true,
+        maxlength: [500, 'Overview cannot exceed 500 characters'],
+      },
+      image: {
+        type: String,
+        required: [true, 'Image URL is required'],
+        trim: true,
+      },
+      venue: {
+        type: String,
+        required: [true, 'Venue is required'],
+        trim: true,
+      },
+      location: {
+        type: String,
+        required: [true, 'Location is required'],
+        trim: true,
+      },
+      date: {
+        type: String,
+        required: [true, 'Date is required'],
+      },
+      time: {
+        type: String,
+        required: [true, 'Time is required'],
+      },
+      mode: {
+        type: String,
+        required: [true, 'Mode is required'],
+        enum: {
+          values: ['online', 'offline', 'hybrid'],
+          message: 'Mode must be either online, offline, or hybrid',
+        },
+      },
+      audience: {
+        type: String,
+        required: [true, 'Audience is required'],
+        trim: true,
+      },
+      agenda: {
+        type: [String],
+        required: [true, 'Agenda is required'],
+        validate: {
+          validator: (v: string[]) => v.length > 0,
+          message: 'At least one agenda item is required',
+        },
+      },
+      organizer: {
+        type: String,
+        required: [true, 'Organizer is required'],
+        trim: true,
+      },
+      tags: {
+        type: [String],
+        required: [true, 'Tags are required'],
+        validate: {
+          validator: (v: string[]) => v.length > 0,
+          message: 'At least one tag is required',
+        },
       },
     },
-    organizer: requiredString("organizer"),
-    tags: {
-      type: [String],
-      required: [true, "tags are required"],
-      validate: {
-        validator: (items: string[]) =>
-          Array.isArray(items) && items.length > 0 && items.every((item) => item.trim().length > 0),
-        message: "tags must contain at least one non-empty item",
-      },
-    },
-  },
-  {
-    timestamps: true,
-  }
+    {
+      timestamps: true, // Auto-generate createdAt and updatedAt
+    }
 );
 
-eventSchema.index({ slug: 1 }, { unique: true });
+// Pre-save hook for slug generation and data normalization
+EventSchema.pre<IEvent>('save', async function (this: IEvent): Promise<void> {
+  const event = this as IEvent;
 
-// Keep derived fields and normalized values consistent before persisting.
-eventSchema.pre("save", function (next) {
-  const doc = this as EventDocument;
-
-  const requiredFields: Array<keyof Pick<EventDocumentShape, "title" | "description" | "overview" | "image" | "venue" | "location" | "date" | "time" | "mode" | "audience" | "organizer">> = [
-    "title",
-    "description",
-    "overview",
-    "image",
-    "venue",
-    "location",
-    "date",
-    "time",
-    "mode",
-    "audience",
-    "organizer",
-  ];
-
-  for (const field of requiredFields) {
-    const value = doc[field];
-    if (typeof value !== "string" || value.trim().length === 0) {
-      next(new Error(`${String(field)} is required`));
-      return;
-    }
+  // Generate slug only if title changed or document is new
+  if (event.isModified('title') || event.isNew) {
+    event.slug = generateSlug(event.title);
   }
 
-  if (!Array.isArray(doc.agenda) || doc.agenda.length === 0 || doc.agenda.some((item) => item.trim().length === 0)) {
-    next(new Error("agenda must contain at least one non-empty item"));
-    return;
+  // Normalize date to ISO format if it's not already
+  if (event.isModified('date')) {
+    event.date = normalizeDate(event.date);
   }
 
-  if (!Array.isArray(doc.tags) || doc.tags.length === 0 || doc.tags.some((item) => item.trim().length === 0)) {
-    next(new Error("tags must contain at least one non-empty item"));
-    return;
+  // Normalize time format (HH:MM)
+  if (event.isModified('time')) {
+    event.time = normalizeTime(event.time);
   }
-
-  // Only regenerate slug when the title changes to keep stable URLs.
-  if (doc.isModified("title")) {
-    doc.slug = slugify(doc.title);
-  }
-
-  // Normalize date/time into deterministic storage formats.
-  doc.date = toIsoDateString(doc.date);
-  doc.time = to24HourTime(doc.time);
-
-  next();
 });
 
-export const Event = (models.Event as EventModel | undefined) ?? model<EventDocumentShape, EventModel>("Event", eventSchema);
+// Helper function to generate URL-friendly slug
+function generateSlug(title: string): string {
+  return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
+// Helper function to normalize date to ISO format
+function normalizeDate(dateString: string): string {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    throw new Error('Invalid date format');
+  }
+  return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+}
+
+// Helper function to normalize time format
+function normalizeTime(timeString: string): string {
+  // Handle various time formats and convert to HH:MM (24-hour format)
+  const timeRegex = /^(\d{1,2}):(\d{2})(\s*(AM|PM))?$/i;
+  const match = timeString.trim().match(timeRegex);
+
+  if (!match) {
+    throw new Error('Invalid time format. Use HH:MM or HH:MM AM/PM');
+  }
+
+  let hours = parseInt(match[1]);
+  const minutes = match[2];
+  const period = match[4]?.toUpperCase();
+
+  if (period) {
+    // Convert 12-hour to 24-hour format
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+  }
+
+  if (hours < 0 || hours > 23 || parseInt(minutes) < 0 || parseInt(minutes) > 59) {
+    throw new Error('Invalid time values');
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+}
+
+// Create unique index on slug for better performance
+EventSchema.index({ slug: 1 }, { unique: true });
+
+// Create compound index for common queries
+EventSchema.index({ date: 1, mode: 1 });
+
+const Event = models.Event || model<IEvent>('Event', EventSchema);
+
+export default Event;
