@@ -8,16 +8,12 @@ export async function POST(req: NextRequest) {
         await connectDb();
         const formData = await req.formData();
 
-        let event;
+        const event = Object.fromEntries(formData.entries());
 
-        try {
-            event = Object.fromEntries(formData.entries());
-        } catch (e) {
-            return NextResponse.json({message: 'Invalid JSON data format'}, { status : 400 })
+        const file = formData.get('image');
+        if (!(file instanceof File)) {
+            return NextResponse.json({ message: 'Image file is required' }, { status: 400 });
         }
-
-        const file = formData.get('image') as File;
-        if(!File) return NextResponse.json({message: 'Image file is required'}, {status: 400})
 
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -38,7 +34,10 @@ export async function POST(req: NextRequest) {
 
     } catch (e) {
         console.log(e);
-        return NextResponse.json({message: 'Event Creation Failed', error: e instanceof Error ? e.message : 'Unknown Error'})
+        return NextResponse.json(
+            { message: 'Event Creation Failed', error: e instanceof Error ? e.message : 'Unknown Error' },
+            { status: 500 }
+        );
     }
 }
 
@@ -48,6 +47,7 @@ export async function GET() {
         const events = await Event.find().sort({createdAt: -1});
         return NextResponse.json({message: 'Events fetched successfully', events}, {status:200});
     } catch (e) {
-        return NextResponse.json({message: 'Failed to fetch events', error: e }, {status:500})
+        const message = e instanceof Error ? e.message : 'Unknown error';
+        return NextResponse.json({message: 'Failed to fetch events', error: message }, {status:500})
     }
 }
