@@ -1,30 +1,23 @@
 import ExploreBtn from "@/components/ExploreBtn";
 import EventCard from "@/components/EventCard";
 import { IEvent } from "@/database/event.model";
-
-
+import Event from "@/database/event.model";
+import connectDb from "@/lib/mongodb";
+import { cacheLife } from "next/cache";
 
 const Page = async () => {
-    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  'use cache';
+  cacheLife('hours');
     let events: IEvent[] = [];
 
-    if (BASE_URL) {
-      try {
-        const response = await fetch(`${BASE_URL.replace(/\/$/, "")}/api/events`, { cache: "no-store" });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch events: ${response.status}`);
-        }
-
-        const payload = await response.json();
-        if (Array.isArray(payload?.events)) {
-          events = payload.events;
-        }
-      } catch (error) {
-        console.error("Failed to load events", error);
+    try {
+      await connectDb();
+      const eventsData = await Event.find().sort({createdAt: -1}).lean();
+      if (eventsData) {
+        events = JSON.parse(JSON.stringify(eventsData));
       }
-    } else {
-      console.error("NEXT_PUBLIC_BASE_URL is not configured");
+    } catch (error) {
+      console.error("Failed to load events", error);
     }
 
   return (
@@ -38,7 +31,7 @@ const Page = async () => {
         <h3>Featured Events</h3>
         <ul className="events">
           {events.length > 0  && events.map((event:IEvent) => (
-            <li key={event.title}>
+            <li key={event.title} className="list-none">
               <EventCard {...event} />
             </li>
           ))}

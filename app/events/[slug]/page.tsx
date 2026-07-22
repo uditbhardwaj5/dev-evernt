@@ -1,16 +1,12 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import EventCard from "@/components/EventCard";
 import BookEvent from "@/components/BookEvent";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
 
-function getBaseUrl(): string {
-  if (!BASE_URL) {
-    throw new Error("NEXT_PUBLIC_BASE_URL is not configured");
-  }
-
-  return BASE_URL.replace(/\/$/, "");
-}
+import Event from "@/database/event.model";
+import connectDb from "@/lib/mongodb";
 
 function safeParseJsonStringArray(rawValue: unknown): string[] {
   if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
@@ -56,23 +52,19 @@ const EventTags = ({tags}: {tags: string[]}) => (
   </div>
 )
 
-const EventDetailsPage = async ({params}:{params: Promise<{slug: string}>}) => {
-  const {slug} = await params;
+import { Suspense } from "react";
+
+const EventDetailsContent = async ({params}: {params: Promise<{slug: string}>}) => {
+  const { slug } = await params;
   let eventData: Record<string, unknown> | null = null;
 
   try {
-    const request = await fetch(`${getBaseUrl()}/api/events/${slug}`, { cache: "no-store" });
-
-    if (request.status === 404) {
+    await connectDb();
+    const event = await Event.findOne({ slug }).lean();
+    if (!event) {
       return notFound();
     }
-
-    if (!request.ok) {
-      throw new Error(`Failed to fetch event details: ${request.status}`);
-    }
-
-    const payload = await request.json();
-    eventData = payload?.event ?? null;
+    eventData = JSON.parse(JSON.stringify(event));
   } catch {
     return notFound();
   }
@@ -108,6 +100,8 @@ const EventDetailsPage = async ({params}:{params: Promise<{slug: string}>}) => {
   if (!descriptionText) return notFound();
 
   const bookings =10;
+
+  const similarEvents = await getSimilarEventsBySlug(slug);
 
   const agendaItems = Array.isArray(agenda) && agenda.length > 0
     ? safeParseJsonStringArray(agenda[0])
@@ -161,7 +155,23 @@ const EventDetailsPage = async ({params}:{params: Promise<{slug: string}>}) => {
           </div>
         </aside>
       </div>
+      <div className="flex w-full flex-col gap-4 pt-20">
+        <h2>Similar Events</h2>
+        <div className="evnts">
+          {similarEvents.length > 0 && similarEvents.map((similarEvent) => (
+            <EventCard key={similarEvent.slug} {...similarEvent} />
+          ))}
+        </div>
+      </div>
     </section>
+  );
+};
+
+const EventDetailsPage = ({params}:{params: Promise<{slug: string}>}) => {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <EventDetailsContent params={params} />
+    </Suspense>
   );
 };
 
