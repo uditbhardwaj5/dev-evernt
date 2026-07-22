@@ -5,7 +5,7 @@ import BookEvent from "@/components/BookEvent";
 
 import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
 
-import Event from "@/database/event.model";
+import Event, { IEvent } from "@/database/event.model";
 import connectDb from "@/lib/mongodb";
 
 function safeParseJsonStringArray(rawValue: unknown): string[] {
@@ -85,6 +85,7 @@ const EventDetailsContent = async ({params}: {params: Promise<{slug: string}>}) 
     audience,
     tags,
     organizer,
+    _id,
   } = eventData;
 
   const descriptionText = typeof description === "string" ? description : "";
@@ -151,14 +152,14 @@ const EventDetailsContent = async ({params}: {params: Promise<{slug: string}>}) 
             ) : (
               <p>Be the first to book your spot!</p>
             )}
-            <BookEvent />            
+            <BookEvent eventId={String(_id)} slug={slug}/>            
           </div>
         </aside>
       </div>
       <div className="flex w-full flex-col gap-4 pt-20">
         <h2>Similar Events</h2>
         <div className="evnts">
-          {similarEvents.length > 0 && similarEvents.map((similarEvent) => (
+          {similarEvents.length > 0 && similarEvents.map((similarEvent: IEvent) => (
             <EventCard key={similarEvent.slug} {...similarEvent} />
           ))}
         </div>

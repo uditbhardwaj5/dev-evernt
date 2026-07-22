@@ -8,7 +8,8 @@ export const getSimilarEventsBySlug = async (slug: string) => {
         await connectDb();
         const event = await Event.findOne({ slug });
 
-        return await Event.find({ _id: { $ne: event._id }, tags: { $in: event?.tags } } ).limit(3).lean();
+        const events = await Event.find({ _id: { $ne: event._id }, tags: { $in: event?.tags } } ).limit(3).lean();
+        return JSON.parse(JSON.stringify(events));
     }catch{
         return [];
     }

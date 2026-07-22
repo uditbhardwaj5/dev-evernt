@@ -3,6 +3,7 @@ import { IEvent } from "@/database/event.model";
 import Event from "@/database/event.model";
 import connectDb from "@/lib/mongodb";
 import { cacheLife } from "next/cache";
+import TrackEvent from "@/components/TrackEvent";
 
 const EventsPage = async () => {
     'use cache';
@@ -21,6 +22,7 @@ const EventsPage = async () => {
 
   return (
     <section>
+      <TrackEvent eventName="events_page_viewed" />
       <h1 className="text-center">All Events</h1>
       <p className="text-center mt-5 text-light-100">
         Browse and discover developer events happening around you.
